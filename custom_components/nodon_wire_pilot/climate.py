@@ -52,6 +52,7 @@ VALUE_COMFORT_1 = "comfort_-1"
 VALUE_COMFORT = "comfort"
 
 ATTR_MODE = "pilot_wire_mode"
+SELECT_OPTION = "option"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -266,7 +267,7 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
         """Turn heater toggleable device on."""
         data = {
             ATTR_ENTITY_ID: self.heater_entity_id,
-            ATTR_MODE: value,
+            SELECT_OPTION: value,
         }
 
         await self.hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
