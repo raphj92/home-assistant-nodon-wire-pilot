@@ -41,8 +41,8 @@ CONF_HEATER = "heater"
 CONF_SENSOR = "sensor"
 CONF_ADDITIONAL_MODES = "additional_modes"
 
-PRESET_COMFORT_1 = "comfort-1"
-PRESET_COMFORT_2 = "comfort-2"
+PRESET_COMFORT_1 = "Comfort -1"
+PRESET_COMFORT_2 = "Comfort -2"
 
 VALUE_OFF = "off"
 VALUE_FROST = "frost_protection"
