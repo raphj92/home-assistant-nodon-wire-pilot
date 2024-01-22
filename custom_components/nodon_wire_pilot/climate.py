@@ -1,4 +1,4 @@
-"""Platform for Qubino Wire Pilot."""
+"""Platform for Nodon Wire Pilot."""
 import logging
 
 import voluptuous as vol
@@ -13,10 +13,9 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    DOMAIN as LIGHT_DOMAIN,
-    SERVICE_TURN_ON as LIGHT_SERVICE_TURN_ON,
+from homeassistant.components.select import (
+    DOMAIN as SELECT_DOMAIN,
+    SERVICE_SELECT_OPTION,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -36,7 +35,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_NAME = "Qubino Thermostat"
+DEFAULT_NAME = "Nodon Thermostat"
 
 CONF_HEATER = "heater"
 CONF_SENSOR = "sensor"
@@ -45,12 +44,14 @@ CONF_ADDITIONAL_MODES = "additional_modes"
 PRESET_COMFORT_1 = "comfort-1"
 PRESET_COMFORT_2 = "comfort-2"
 
-VALUE_OFF = 10
-VALUE_FROST = 20
-VALUE_ECO = 30
-VALUE_COMFORT_2 = 40
-VALUE_COMFORT_1 = 50
-VALUE_COMFORT = 99
+VALUE_OFF = "off"
+VALUE_FROST = "frost_protection"
+VALUE_ECO = "eco"
+VALUE_COMFORT_2 = "comfort_-2"
+VALUE_COMFORT_1 = "comfort_-1"
+VALUE_COMFORT = "comfort"
+
+ATTR_MODE = "pilot_wire_mode"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -78,15 +79,15 @@ async def async_setup_platform(
 
     async_add_entities(
         [
-            QubinoWirePilotClimate(
+            NodonPilotClimate(
                 unique_id, name, heater_entity_id, sensor_entity_id, additional_modes
             )
         ]
     )
 
 
-class QubinoWirePilotClimate(ClimateEntity, RestoreEntity):
-    """Representation of a Qubino Wire Pilot device."""
+class NodonPilotClimate(ClimateEntity, RestoreEntity):
+    """Representation of a Nodon Wire Pilot device."""
 
     def __init__(
         self, unique_id, name, heater_entity_id, sensor_entity_id, additional_modes
@@ -99,7 +100,7 @@ class QubinoWirePilotClimate(ClimateEntity, RestoreEntity):
         self._cur_temperature = None
 
         self._attr_unique_id = (
-            unique_id if unique_id else "qubino_wire_pilot_" + heater_entity_id
+            unique_id if unique_id else "nodon_wire_pilot_" + heater_entity_id
         )
         self._attr_name = name
 
@@ -155,13 +156,7 @@ class QubinoWirePilotClimate(ClimateEntity, RestoreEntity):
         if state is None:
             return
 
-        brightness = state.attributes.get(ATTR_BRIGHTNESS)
-        if brightness is None:
-            brightness = 0
-        else:
-            brightness = round(brightness / 255 * 99, 0)
-
-        return brightness
+        return state.attributes.get(ATTR_MODE)
 
     # Presets
     @property
@@ -186,15 +181,15 @@ class QubinoWirePilotClimate(ClimateEntity, RestoreEntity):
 
         if value is None:
             return None
-        if value <= VALUE_OFF:
+        if value == VALUE_OFF:
             return PRESET_NONE
-        elif value <= VALUE_FROST:
+        elif value == VALUE_FROST:
             return PRESET_AWAY
-        elif value <= VALUE_ECO:
+        elif value == VALUE_ECO:
             return PRESET_ECO
-        elif value <= VALUE_COMFORT_2 and self.additional_modes:
+        elif value == VALUE_COMFORT_2 and self.additional_modes:
             return PRESET_COMFORT_2
-        elif value <= VALUE_COMFORT_1 and self.additional_modes:
+        elif value == VALUE_COMFORT_1 and self.additional_modes:
             return PRESET_COMFORT_1
         else:
             return PRESET_COMFORT
@@ -240,7 +235,7 @@ class QubinoWirePilotClimate(ClimateEntity, RestoreEntity):
 
         if value is None:
             return None
-        if value <= VALUE_OFF:
+        if value == VALUE_OFF:
             return HVACMode.OFF
         else:
             return HVACMode.HEAT
@@ -271,7 +266,7 @@ class QubinoWirePilotClimate(ClimateEntity, RestoreEntity):
         """Turn heater toggleable device on."""
         data = {
             ATTR_ENTITY_ID: self.heater_entity_id,
-            ATTR_BRIGHTNESS: value * 255 / 99,
+            ATTR_MODE: value,
         }
 
-        await self.hass.services.async_call(LIGHT_DOMAIN, LIGHT_SERVICE_TURN_ON, data)
+        await self.hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
