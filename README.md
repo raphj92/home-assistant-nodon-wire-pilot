@@ -1,6 +1,6 @@
 # home-assistant-nodon-wire-pilot
 
-Home Assistant Component for Nodon Wire Pilot (forked from [@piitaya's](https://github.com/piitaya) [home-assistant-qubino-wire-pilot](https://github.com/piitaya/home-assistant-qubino-wire-pilot))
+Home Assistant Component for Nodon Wire Pilot (forked from [@NicolasHng's](https://github.com/nicolashng) [home-assistant-nodon-wire-pilot](https://github.com/nicolashng/home-assistant-nodon-wire-pilot)) 
 
 ## Introduction
 
