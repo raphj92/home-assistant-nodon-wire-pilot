@@ -1,10 +1,10 @@
 {
-  "domain": "nodon_wire_pilot",
-  "name": "Nodon wire pilot",
-  "documentation": "https://github.com/NicolasHng/home-assistant-nodon-wire-pilot",
-  "issue_tracker": "https://github.com/NicolasHng/home-assistant-nodon-wire-pilot/issues",
-  "requirements": [],
-  "dependencies": [],
-  "version": "0.0.3",
-  "codeowners": ["@piitaya", "@dx44", "@NicolasHng"]
+    "domain": "nodon_wire_pilot",
+    "name": "Nodon wire pilot",
+    "documentation": "https://github.com/raphj92/home-assistant-nodon-wire-pilot",
+    "issue_tracker": "https://github.com/raphj92/home-assistant-nodon-wire-pilot/issues",
+    "requirements": [],
+    "dependencies": [],
+    "version": "0.0.4",
+    "codeowners": ["@piitaya", "@dx44", "@NicolasHng", "@raphj92"]
 }

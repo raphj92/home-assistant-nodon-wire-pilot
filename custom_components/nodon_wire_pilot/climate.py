@@ -51,7 +51,7 @@ VALUE_COMFORT_2 = "comfort_-2"
 VALUE_COMFORT_1 = "comfort_-1"
 VALUE_COMFORT = "comfort"
 
-ATTR_MODE = "pilot_wire_mode"
+ATTR_MODE = "current_option"
 SELECT_OPTION = "option"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -150,14 +150,14 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
         return self._cur_temperature
 
     @property
-    def heater_value(self) -> int | None:
+    def heater_value(self) -> str | None:
         """Return entity brightness."""
         state = self.hass.states.get(self.heater_entity_id)
 
         if state is None:
-            return
+            return None
 
-        return state.attributes.get(ATTR_MODE)
+        return state.state
 
     # Presets
     @property
@@ -173,7 +173,12 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
                 PRESET_NONE,
             ]
         else:
-            return [PRESET_COMFORT, PRESET_ECO, PRESET_AWAY, PRESET_NONE]
+            return [
+                PRESET_COMFORT,
+                PRESET_ECO,
+                PRESET_AWAY,
+                PRESET_NONE,
+            ]
 
     @property
     def preset_mode(self) -> str | None:
@@ -184,16 +189,17 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
             return None
         if value == VALUE_OFF:
             return PRESET_NONE
-        elif value == VALUE_FROST:
+        if value == VALUE_FROST:
             return PRESET_AWAY
-        elif value == VALUE_ECO:
+        if value == VALUE_ECO:
             return PRESET_ECO
-        elif value == VALUE_COMFORT_2 and self.additional_modes:
+        if value == VALUE_COMFORT_2 and self.additional_modes:
             return PRESET_COMFORT_2
-        elif value == VALUE_COMFORT_1 and self.additional_modes:
+        if value == VALUE_COMFORT_1 and self.additional_modes:
             return PRESET_COMFORT_1
-        else:
+        if value == VALUE_COMFORT:
             return PRESET_COMFORT
+        return value
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset mode."""
@@ -216,7 +222,10 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
     @property
     def hvac_modes(self) -> list[HVACMode]:
         """List of available operation modes."""
-        return [HVACMode.HEAT, HVACMode.OFF]
+        return [
+            HVACMode.HEAT,
+            HVACMode.OFF
+        ]
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
@@ -238,8 +247,7 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
             return None
         if value == VALUE_OFF:
             return HVACMode.OFF
-        else:
-            return HVACMode.HEAT
+        return HVACMode.HEAT
 
     @callback
     def _async_heater_changed(self, entity_id, old_state, new_state) -> None:
@@ -267,7 +275,7 @@ class NodonPilotClimate(ClimateEntity, RestoreEntity):
         """Turn heater toggleable device on."""
         data = {
             ATTR_ENTITY_ID: self.heater_entity_id,
-            SELECT_OPTION: value,
+            SELECT_OPTION: value
         }
 
         await self.hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
