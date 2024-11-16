@@ -1,10 +1,13 @@
 {
     "domain": "nodon_wire_pilot",
     "name": "Nodon wire pilot",
+    "config_flow": true,
     "documentation": "https://github.com/raphj92/home-assistant-nodon-wire-pilot",
     "issue_tracker": "https://github.com/raphj92/home-assistant-nodon-wire-pilot/issues",
+    "integration_type": "helper",
+    "iot_class": "local_polling",
     "requirements": [],
-    "dependencies": [],
-    "version": "0.0.4",
+    "dependencies": ["sensor", "select"],
+    "version": "0.1.0",
     "codeowners": ["@piitaya", "@dx44", "@NicolasHng", "@raphj92"]
 }
