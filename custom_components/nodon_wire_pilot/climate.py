@@ -341,7 +341,6 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
         new_state = event.data["new_state"]
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
-
         self._async_update_temp(new_state)
         self.async_write_ha_state()
 
@@ -365,7 +364,7 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
             cur_temp = float(state.state)
             if not math.isfinite(cur_temp):
                 raise ValueError(f"Sensor has illegal state {state.state}")
-            self._cur_temp = cur_temp
+            self._cur_temperature = cur_temp
         except ValueError as ex:
             _LOGGER.error("Unable to update from temperature sensor: %s", ex)
 
