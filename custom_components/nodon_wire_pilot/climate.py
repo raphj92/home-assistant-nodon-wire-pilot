@@ -114,7 +114,7 @@ async def _async_setup_config(
 ) -> None:
     """Set up the wire pilot climate platform."""
     name: str | None = config.get(CONF_NAME)
-    heater_entity_id: str = config.get(CONF_HEATER)
+    wire_pilot_entity_id: str = config.get(CONF_HEATER)
     sensor_entity_id: str | None = config.get(CONF_SENSOR)
     additional_modes: bool = config.get(CONF_ADDITIONAL_MODES)
 
@@ -123,11 +123,11 @@ async def _async_setup_config(
             NodonWirePilotClimate(
                 hass,
                 name,
-                heater_entity_id,
+                wire_pilot_entity_id,
                 sensor_entity_id,
                 additional_modes,
                 unique_id,
-                entry_id or unique_id or f"{DOMAIN}_{heater_entity_id}",
+                entry_id or unique_id or f"{DOMAIN}_{wire_pilot_entity_id}",
             )
         ]
     )
@@ -144,7 +144,7 @@ class NodonWirePilotClimate(ClimateEntity):
         self,
         hass: HomeAssistant,
         name: str | None,
-        heater_entity_id: str,
+        wire_pilot_entity_id: str,
         sensor_entity_id: str | None,
         additional_modes: bool,
         unique_id: str | None,
@@ -154,7 +154,7 @@ class NodonWirePilotClimate(ClimateEntity):
 
         registry = er.async_get(hass)
         device_registry = dr.async_get(hass)
-        heater_entity = registry.async_get(heater_entity_id)
+        heater_entity = registry.async_get(wire_pilot_entity_id)
         device_id = heater_entity.device_id if heater_entity else None
         has_entity_name = heater_entity.has_entity_name if heater_entity else False
 
@@ -168,7 +168,7 @@ class NodonWirePilotClimate(ClimateEntity):
         if name:
             self._attr_name = name
 
-        self.heater_entity_id = heater_entity_id
+        self.wire_pilot_entity_id = wire_pilot_entity_id
         self.sensor_entity_id = sensor_entity_id
         self.additional_modes = additional_modes
         self._cur_temperature = None
@@ -192,7 +192,7 @@ class NodonWirePilotClimate(ClimateEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self.heater_entity_id], self._async_heater_changed
+                self.hass, [self.wire_pilot_entity_id], self._async_heater_changed
             )
         )
 
@@ -236,7 +236,7 @@ class NodonWirePilotClimate(ClimateEntity):
     @property
     def heater_value(self) -> str | None:
         """Return entity state."""
-        state = self.hass.states.get(self.heater_entity_id)
+        state = self.hass.states.get(self.wire_pilot_entity_id)
 
         if state is None:
             return None
@@ -287,7 +287,7 @@ class NodonWirePilotClimate(ClimateEntity):
         _LOGGER.warning(
             "Unexpected value '%s' for entity %s",
             value,
-            self.heater_entity_id,
+            self.wire_pilot_entity_id,
         )
         return None
 
@@ -308,7 +308,7 @@ class NodonWirePilotClimate(ClimateEntity):
         else:
             raise ValueError(f"Unsupported preset mode: {preset_mode}")
 
-        await self._async_set_heater_value(value)
+        await self._async_select_wire_pilot_mode(value)
 
     # Modes
     @property
@@ -328,7 +328,7 @@ class NodonWirePilotClimate(ClimateEntity):
         else:
             raise ValueError(f"Unsupported HVAC mode: {hvac_mode}")
 
-        await self._async_set_heater_value(value)
+        await self._async_select_wire_pilot_mode(value)
 
     @property
     def hvac_mode(self) -> HVACMode | None:
@@ -353,7 +353,7 @@ class NodonWirePilotClimate(ClimateEntity):
         _LOGGER.warning(
             "Unexpected value '%s' for entity %s",
             value,
-            self.heater_entity_id,
+            self.wire_pilot_entity_id,
         )
         return None
     
@@ -391,13 +391,14 @@ class NodonWirePilotClimate(ClimateEntity):
                 raise ValueError(f"Sensor has illegal state {state.state}")
             self._cur_temperature = cur_temp
         except ValueError as ex:
+            self._cur_temperature = None
             _LOGGER.error("Unable to update from temperature sensor: %s", ex)
 
-    async def _async_set_heater_value(self, value: str) -> None:
+    async def _async_select_wire_pilot_mode(self, value: str) -> None:
         """Turn heater toggleable device on."""
         data = {
-            ATTR_ENTITY_ID: self.heater_entity_id,
+            ATTR_ENTITY_ID: self.wire_pilot_entity_id,
             SELECT_OPTION: value
         }
 
-        await self.hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+        await self.hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data, blocking=True)
