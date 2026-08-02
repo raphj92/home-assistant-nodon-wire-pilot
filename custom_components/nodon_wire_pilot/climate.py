@@ -44,30 +44,26 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from . import DOMAIN, PLATFORMS
+from .const import (
+    CONF_ADDITIONAL_MODES,
+    CONF_HEATER,
+    CONF_SENSOR,
+    DOMAIN,
+    PLATFORMS,
+    PRESET_COMFORT_1,
+    PRESET_COMFORT_2,
+    VALUE_COMFORT,
+    VALUE_COMFORT_1,
+    VALUE_COMFORT_2,
+    VALUE_ECO,
+    VALUE_FROST,
+    VALUE_OFF,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_NAME = "Nodon Thermostat"
-
-CONF_HEATER = "heater"
-CONF_SENSOR = "sensor"
-CONF_ADDITIONAL_MODES = "additional_modes"
-
-PRESET_COMFORT_1 = "Comfort -1"
-PRESET_COMFORT_2 = "Comfort -2"
-
-VALUE_OFF = "off"
-VALUE_FROST = "frost_protection"
-VALUE_ECO = "eco"
-VALUE_COMFORT_2 = "comfort_-2"
-VALUE_COMFORT_1 = "comfort_-1"
-VALUE_COMFORT = "comfort"
-
-ATTR_MODE = "current_option"
 SELECT_OPTION = "option"
 
 PLATFORM_SCHEMA_COMMON = vol.Schema(
@@ -93,6 +89,7 @@ async def async_setup_entry(
         PLATFORM_SCHEMA_COMMON(dict(config_entry.options)),
         config_entry.entry_id,
         async_add_entities,
+        config_entry.entry_id,
     )
 
 async def async_setup_platform(
@@ -105,7 +102,7 @@ async def async_setup_platform(
 
     await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
     await _async_setup_config(
-        hass, config, config.get(CONF_UNIQUE_ID), async_add_entities
+        hass, config, config.get(CONF_UNIQUE_ID), async_add_entities, None
     )
 
 async def _async_setup_config(
@@ -113,6 +110,7 @@ async def _async_setup_config(
     config: ConfigType,
     unique_id: str | None,
     async_add_entities: AddEntitiesCallback,
+    entry_id: str | None = None,
 ) -> None:
     """Set up the wire pilot climate platform."""
     name: str | None = config.get(CONF_NAME)
@@ -129,12 +127,13 @@ async def _async_setup_config(
                 sensor_entity_id,
                 additional_modes,
                 unique_id,
+                entry_id or unique_id or f"{DOMAIN}_{heater_entity_id}",
             )
         ]
     )
 
 
-class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
+class NodonWirePilotClimate(ClimateEntity):
     """Representation of a Nodon Wire Pilot device."""
 
     _attr_should_poll = False
@@ -149,6 +148,7 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
         sensor_entity_id: str | None,
         additional_modes: bool,
         unique_id: str | None,
+        entry_id: str,
     ) -> None:
         """Initialize the climate device."""
 
@@ -175,7 +175,7 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
 
         self._attr_has_entity_name = has_entity_name
         self._attr_unique_id = (
-            unique_id if unique_id else "nodon_wire_pilot_" + heater_entity_id
+            unique_id if unique_id else f"{DOMAIN}_{entry_id}"
         )
 
     async def async_added_to_hass(self) -> None:
@@ -221,9 +221,6 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
             | ClimateEntityFeature.TURN_OFF
             | ClimateEntityFeature.TURN_ON
         )
-
-    def update(self) -> None:
-        """Update unit attributes."""
 
     # Temperature
     @property
@@ -280,28 +277,36 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
             return PRESET_AWAY
         if value == VALUE_ECO:
             return PRESET_ECO
-        if value == VALUE_COMFORT_2 and self.additional_modes:
-            return PRESET_COMFORT_2
-        if value == VALUE_COMFORT_1 and self.additional_modes:
-            return PRESET_COMFORT_1
+        if value == VALUE_COMFORT_2:
+            return PRESET_COMFORT_2 if self.additional_modes else PRESET_COMFORT
+        if value == VALUE_COMFORT_1:
+            return PRESET_COMFORT_1 if self.additional_modes else PRESET_COMFORT
         if value == VALUE_COMFORT:
             return PRESET_COMFORT
-        return value
+
+        _LOGGER.warning(
+            "Unexpected value '%s' for entity %s",
+            value,
+            self.heater_entity_id,
+        )
+        return None
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset mode."""
-        value = VALUE_OFF
-
         if preset_mode == PRESET_AWAY:
             value = VALUE_FROST
         elif preset_mode == PRESET_ECO:
             value = VALUE_ECO
-        elif preset_mode == PRESET_COMFORT_2 and self.additional_modes:
-            value = VALUE_COMFORT_2
-        elif preset_mode == PRESET_COMFORT_1 and self.additional_modes:
-            value = VALUE_COMFORT_1
         elif preset_mode == PRESET_COMFORT:
             value = VALUE_COMFORT
+        elif preset_mode == PRESET_COMFORT_1 and self.additional_modes:
+            value = VALUE_COMFORT_1
+        elif preset_mode == PRESET_COMFORT_2 and self.additional_modes:
+            value = VALUE_COMFORT_2
+        elif preset_mode == PRESET_NONE:
+            value = VALUE_OFF
+        else:
+            raise ValueError(f"Unsupported preset mode: {preset_mode}")
 
         await self._async_set_heater_value(value)
 
@@ -316,12 +321,12 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
-        value = VALUE_FROST
-
         if hvac_mode == HVACMode.HEAT:
             value = VALUE_COMFORT
         elif hvac_mode == HVACMode.OFF:
             value = VALUE_OFF
+        else:
+            raise ValueError(f"Unsupported HVAC mode: {hvac_mode}")
 
         await self._async_set_heater_value(value)
 
@@ -332,15 +337,41 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
 
         if value is None:
             return None
+
         if value == VALUE_OFF:
             return HVACMode.OFF
-        return HVACMode.HEAT
+
+        if value in (
+            VALUE_FROST,
+            VALUE_ECO,
+            VALUE_COMFORT_2,
+            VALUE_COMFORT_1,
+            VALUE_COMFORT,
+        ):
+            return HVACMode.HEAT
+
+        _LOGGER.warning(
+            "Unexpected value '%s' for entity %s",
+            value,
+            self.heater_entity_id,
+        )
+        return None
     
-    async def _async_sensor_changed(self, event: Event[EventStateChangedData]) -> None:
+    async def _async_sensor_changed(
+        self,
+        event: Event[EventStateChangedData],
+    ) -> None:
         """Handle temperature changes."""
         new_state = event.data["new_state"]
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+
+        if new_state is None or new_state.state in (
+            STATE_UNAVAILABLE,
+            STATE_UNKNOWN,
+        ):
+            self._cur_temperature = None
+            self.async_write_ha_state()
             return
+
         self._async_update_temp(new_state)
         self.async_write_ha_state()
 
@@ -350,12 +381,6 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
         new_state = event.data["new_state"]
         if new_state is None:
             return
-        self.async_write_ha_state()
-
-    async def _async_temperature_changed(self, entity_id, old_state, new_state) -> None:
-        if new_state is None:
-            return
-        self._async_update_temp(new_state)
         self.async_write_ha_state()
 
     @callback
@@ -368,7 +393,7 @@ class NodonWirePilotClimate(ClimateEntity, RestoreEntity):
         except ValueError as ex:
             _LOGGER.error("Unable to update from temperature sensor: %s", ex)
 
-    async def _async_set_heater_value(self, value):
+    async def _async_set_heater_value(self, value: str) -> None:
         """Turn heater toggleable device on."""
         data = {
             ATTR_ENTITY_ID: self.heater_entity_id,

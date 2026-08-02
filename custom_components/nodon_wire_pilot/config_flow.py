@@ -16,16 +16,24 @@ from homeassistant.helpers.schema_config_entry_flow import (
     wrapped_entity_config_entry_title,
 )
 
-from .climate import CONF_ADDITIONAL_MODES, CONF_HEATER, CONF_SENSOR, DOMAIN
+from .const import (
+    CONF_ADDITIONAL_MODES,
+    CONF_HEATER,
+    CONF_SENSOR,
+    DOMAIN,
+)
+
 
 OPTIONS_SCHEMA = {
     vol.Optional(CONF_SENSOR): selector.EntitySelector(
         selector.EntitySelectorConfig(
-            domain=SENSOR_DOMAIN, device_class=SensorDeviceClass.TEMPERATURE
+            domain=SENSOR_DOMAIN,
+            device_class=SensorDeviceClass.TEMPERATURE,
         )
     ),
     vol.Optional(CONF_ADDITIONAL_MODES): selector.BooleanSelector(),
 }
+
 
 CONFIG_SCHEMA = {
     vol.Required(CONF_HEATER): selector.EntitySelector(
@@ -38,6 +46,7 @@ CONFIG_SCHEMA = {
 CONFIG_FLOW = {
     "user": SchemaFlowFormStep(vol.Schema(CONFIG_SCHEMA)),
 }
+
 
 OPTIONS_FLOW = {
     "init": SchemaFlowFormStep(vol.Schema(OPTIONS_SCHEMA)),
@@ -52,12 +61,28 @@ class ConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
 
     def async_config_entry_title(self, options: Mapping[str, Any]) -> str:
         """Return config entry title and hide the wrapped entity if registered."""
-        # Hide the wrapped entry if registered
+        # Hide the wrapped entry if registered.
         registry = er.async_get(self.hass)
-        entity_entry = registry.async_get(options[CONF_HEATER])
-        if entity_entry is not None and not entity_entry.hidden:
-            registry.async_update_entity(
-                options[CONF_HEATER], hidden_by=er.RegistryEntryHider.INTEGRATION
+
+        # CONF_HEATER is in config entry data, not options.
+        heater_entity_id = (
+            self.config_entry.data.get(CONF_HEATER)
+            if self.config_entry
+            else options.get(CONF_HEATER)
+        )
+
+        if heater_entity_id:
+            entity_entry = registry.async_get(heater_entity_id)
+
+            if entity_entry is not None and not entity_entry.hidden:
+                registry.async_update_entity(
+                    heater_entity_id,
+                    hidden_by=er.RegistryEntryHider.INTEGRATION,
+                )
+
+            return wrapped_entity_config_entry_title(
+                self.hass,
+                heater_entity_id,
             )
 
-        return wrapped_entity_config_entry_title(self.hass, options[CONF_HEATER])
+        return "Nodon Wire Pilot"

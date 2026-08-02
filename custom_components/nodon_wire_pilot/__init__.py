@@ -1,15 +1,13 @@
 """Nodon wire pilot component."""
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device import (
     async_remove_stale_devices_links_keep_entity_device,
 )
 
-CONF_HEATER = "heater"
-DOMAIN = "nodon_wire_pilot"
-PLATFORMS = [Platform.CLIMATE]
+
+from .const import CONF_HEATER, DOMAIN, PLATFORMS
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -18,7 +16,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_remove_stale_devices_links_keep_entity_device(
         hass,
         entry.entry_id,
-        entry.options[CONF_HEATER],
+        entry.data[CONF_HEATER],
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
