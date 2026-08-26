@@ -87,9 +87,8 @@ async def async_setup_entry(
     await _async_setup_config(
         hass,
         PLATFORM_SCHEMA_COMMON(dict(config_entry.options)),
-        config_entry.entry_id,
+        None,
         async_add_entities,
-        config_entry.entry_id,
     )
 
 async def async_setup_platform(
@@ -110,7 +109,6 @@ async def _async_setup_config(
     config: ConfigType,
     unique_id: str | None,
     async_add_entities: AddEntitiesCallback,
-    entry_id: str | None = None,
 ) -> None:
     """Set up the wire pilot climate platform."""
     name: str | None = config.get(CONF_NAME)
@@ -127,7 +125,6 @@ async def _async_setup_config(
                 sensor_entity_id,
                 additional_modes,
                 unique_id,
-                entry_id or unique_id or f"{DOMAIN}_{wire_pilot_entity_id}",
             )
         ]
     )
@@ -148,7 +145,6 @@ class NodonWirePilotClimate(ClimateEntity):
         sensor_entity_id: str | None,
         additional_modes: bool,
         unique_id: str | None,
-        entry_id: str,
     ) -> None:
         """Initialize the climate device."""
 
@@ -175,7 +171,7 @@ class NodonWirePilotClimate(ClimateEntity):
 
         self._attr_has_entity_name = has_entity_name
         self._attr_unique_id = (
-            unique_id if unique_id else f"{DOMAIN}_{entry_id}"
+            unique_id or f"{DOMAIN}_{heater_entity_id}"
         )
 
     async def async_added_to_hass(self) -> None:
