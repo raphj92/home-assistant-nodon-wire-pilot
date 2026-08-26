@@ -8,6 +8,6 @@
     "iot_class": "local_polling",
     "requirements": [],
     "dependencies": ["sensor", "select"],
-    "version": "0.1.0",
+    "version": "0.1.1",
     "codeowners": ["@piitaya", "@dx44", "@NicolasHng", "@raphj92"]
 }
