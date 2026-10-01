@@ -25,14 +25,36 @@ def mock_config_entry() -> MagicMock:
     return entry
 
 
+@pytest.fixture
+def mock_config_entry_heater_in_options() -> MagicMock:
+    """Create a mock config entry with heater in options."""
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry_id"
+    entry.data = {}
+    entry.options = {CONF_HEATER: "select.heater_living_room"}
+    entry.add_update_listener = MagicMock(return_value=MagicMock())
+    return entry
+
+
+@pytest.fixture
+def mock_config_entry_missing_heater() -> MagicMock:
+    """Create a mock config entry without heater."""
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry_id"
+    entry.data = {}
+    entry.options = {}
+    entry.add_update_listener = MagicMock(return_value=MagicMock())
+    return entry
+
+
 class TestAsyncSetupEntry:
     """Tests for async_setup_entry function."""
 
     @pytest.mark.asyncio
-    async def test_async_setup_entry_success(
+    async def test_async_setup_entry_success_heater_in_data(
         self, mock_hass: MagicMock, mock_config_entry: MagicMock
     ) -> None:
-        """Test successful setup entry."""
+        """Test successful setup entry with heater in data."""
         with patch(
             "custom_components.nodon_wire_pilot.async_remove_stale_devices_links_keep_entity_device"
         ) as mock_remove_stale:
@@ -48,6 +70,34 @@ class TestAsyncSetupEntry:
         mock_config_entry.add_update_listener.assert_called_once_with(
             config_entry_update_listener
         )
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_success_heater_in_options(
+        self, mock_hass: MagicMock, mock_config_entry_heater_in_options: MagicMock
+    ) -> None:
+        """Test successful setup entry with heater in options."""
+        with patch(
+            "custom_components.nodon_wire_pilot.async_remove_stale_devices_links_keep_entity_device"
+        ) as mock_remove_stale:
+            result = await async_setup_entry(mock_hass, mock_config_entry_heater_in_options)
+
+        assert result is True
+        mock_remove_stale.assert_called_once_with(
+            mock_hass,
+            mock_config_entry_heater_in_options.entry_id,
+            mock_config_entry_heater_in_options.options[CONF_HEATER],
+        )
+        mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
+            mock_config_entry_heater_in_options, PLATFORMS
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_missing_heater_raises(
+        self, mock_hass: MagicMock, mock_config_entry_missing_heater: MagicMock
+    ) -> None:
+        """Test setup entry raises when heater is missing."""
+        with pytest.raises(ValueError, match="Missing heater in config entry"):
+            await async_setup_entry(mock_hass, mock_config_entry_missing_heater)
 
     @pytest.mark.asyncio
     async def test_async_setup_entry_forward_setups_fails(
