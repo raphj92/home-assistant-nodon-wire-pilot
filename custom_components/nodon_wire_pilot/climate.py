@@ -171,7 +171,7 @@ class NodonWirePilotClimate(ClimateEntity):
 
         self._attr_has_entity_name = has_entity_name
         self._attr_unique_id = (
-            unique_id or f"{DOMAIN}_{heater_entity_id}"
+            unique_id or f"{DOMAIN}_{wire_pilot_entity_id}"
         )
 
     async def async_added_to_hass(self) -> None:
